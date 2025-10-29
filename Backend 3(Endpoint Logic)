@@ -1,0 +1,30 @@
+app.post('/transfer', async (req, res) => {
+  const { from, to, amount } = req.body;
+
+  if (!from || !to || !amount || amount <= 0) {
+    return res.status(400).json({ error: 'Invalid transfer data' });
+  }
+
+  try {
+    const sender = await Account.findOne({ username: from });
+    const receiver = await Account.findOne({ username: to });
+
+    if (!sender) return res.status(404).json({ error: 'Sender account not found' });
+    if (!receiver) return res.status(404).json({ error: 'Receiver account not found' });
+
+    if (sender.balance < amount) {
+      return res.status(400).json({ error: 'Insufficient funds' });
+    }
+
+    // Sequential updates
+    sender.balance -= amount;
+    await sender.save();
+
+    receiver.balance += amount;
+    await receiver.save();
+
+    res.json({ message: 'Transfer successful', from: sender.username, to: receiver.username, amount });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error', details: err.message });
+  }
+});
